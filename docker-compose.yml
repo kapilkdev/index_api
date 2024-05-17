@@ -1,0 +1,50 @@
+version: '3'
+services:
+  db:
+    image: postgres:14
+    environment:
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./tmp/redis_data:/var/lib/redis/data
+
+  sidekiq:
+    build: .
+    command: bundle exec sidekiq
+    env_file: .env
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+
+  app:
+    build: .
+    command: >
+      bash -c "bundle exec rails db:migrate &&
+              bundle exec rails db:migrate RAILS_ENV=test &&
+              echo "SeedingData" &&
+              bundle exec rails db:seed &&
+              echo "SeedindDataComplete" &&
+              echo "RunningTestCases" &&
+              bundle exec rspec &&
+              echo "RunningTestCasesCompleted" &&
+              bundle exec puma -p 3000 -C config/puma.rb"
+    env_file: .env
+    volumes:
+      - .:/app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+      - redis
+
+volumes:
+  postgres:

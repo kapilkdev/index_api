@@ -1,0 +1,2 @@
+CREATE DATABASE index_api_development;
+CREATE DATABASE index_api_test;
